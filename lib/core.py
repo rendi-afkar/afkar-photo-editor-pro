@@ -821,6 +821,106 @@ def ensure_photo_license():
 
 
 
+def update_from_github():
+    import subprocess
+
+    root = Path(__file__).resolve().parent.parent
+
+    def run_git(args):
+        return subprocess.run(
+            ["git"] + args,
+            cwd=str(root),
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=60,
+        )
+
+    print("\\nMemeriksa pembaruan GitHub...")
+    try:
+        check = run_git(["rev-parse", "--is-inside-work-tree"])
+        if check.returncode != 0 or check.stdout.strip() != "true":
+            print("Folder aplikasi bukan Git repository.")
+            return
+
+        remote = run_git(["remote", "get-url", "origin"])
+        if remote.returncode != 0:
+            print("Remote GitHub tidak ditemukan.")
+            return
+
+        url = remote.stdout.strip().lower().removesuffix(".git")
+        if url not in (
+            "https://github.com/rendi-afkar/afkar-photo-editor-pro",
+            "git@github.com:rendi-afkar/afkar-photo-editor-pro",
+            "ssh://git@github.com/rendi-afkar/afkar-photo-editor-pro",
+        ):
+            print("Update dibatalkan: remote bukan repository resmi.")
+            return
+
+        branch = run_git(["branch", "--show-current"])
+        if branch.returncode != 0 or branch.stdout.strip() != "main":
+            print("Update membutuhkan branch main.")
+            return
+
+        status = run_git(["status", "--porcelain"])
+        if status.returncode != 0:
+            print("Gagal memeriksa status file lokal.")
+            return
+        if status.stdout.strip():
+            print("Update dibatalkan: ada perubahan lokal.")
+            print("Simpan atau selesaikan perubahan lokal terlebih dahulu.")
+            return
+
+        fetch = run_git(["fetch", "--quiet", "origin", "main"])
+        if fetch.returncode != 0:
+            print("Gagal menghubungi GitHub:")
+            print(fetch.stderr.strip() or "Periksa koneksi internet dan Git.")
+            return
+
+        ancestor = run_git([
+            "merge-base", "--is-ancestor", "HEAD", "origin/main"
+        ])
+        if ancestor.returncode == 1:
+            print("Update dibatalkan: riwayat lokal berbeda dari GitHub.")
+            print("Periksa repository secara manual sebelum melanjutkan.")
+            return
+        if ancestor.returncode != 0:
+            print("Gagal membandingkan versi.")
+            return
+
+        count = run_git([
+            "rev-list", "--count", "HEAD..origin/main"
+        ])
+        if count.returncode != 0:
+            print("Gagal membaca versi GitHub.")
+            return
+
+        if count.stdout.strip() == "0":
+            print("AFKAR PHOTO EDITOR PRO sudah versi terbaru.")
+            return
+
+        print("Pembaruan tersedia:", count.stdout.strip(), "commit.")
+        confirm = input("Unduh dan pasang pembaruan? [y/N]: ").strip().lower()
+        if confirm not in ("y", "ya"):
+            print("Update dibatalkan.")
+            return
+
+        pull = run_git(["pull", "--ff-only", "origin", "main"])
+        if pull.returncode != 0:
+            print("Update gagal:")
+            print(pull.stderr.strip() or pull.stdout.strip())
+            return
+
+        print(pull.stdout.strip() or "Pembaruan berhasil.")
+        print("Tutup aplikasi, lalu jalankan kembali: bash main")
+        print("File lisensi di folder home tidak diubah oleh updater.")
+
+    except subprocess.TimeoutExpired:
+        print("Waktu pemeriksaan habis. Coba lagi nanti.")
+    except OSError as exc:
+        print("Kesalahan updater:", exc)
+
+
 def main():
     # Startup AFKAR: banner, sapaan, lalu pemeriksaan status.
     banner(animated=True)
@@ -928,6 +1028,7 @@ def main():
         print(G + "[7] BUKA FOLDER OUTPUT" + RESET)
         print(G + "[8] GANTI NAMA PENGGUNA" + RESET)
         print(G + "[9] LICENSE - AKTIVASI / CEK DETAIL" + RESET)
+        print(G + "[10] UPDATE AFKAR PHOTO EDITOR PRO" + RESET)
         print(R + "[0] KELUAR" + RESET)
 
         choice = input(
@@ -952,6 +1053,8 @@ def main():
             change_user_name()
         elif choice == "9":
             show_photo_license_details()
+        elif choice == "10":
+            update_from_github()
         elif choice == "0":
             print(
                 G + f"Terima kasih, {active_name}, "
