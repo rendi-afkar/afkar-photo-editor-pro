@@ -836,7 +836,7 @@ def update_from_github():
             timeout=60,
         )
 
-    print("\\nMemeriksa pembaruan GitHub...")
+    print("\n" + C + "Memeriksa pembaruan GitHub..." + RESET)
     try:
         check = run_git(["rev-parse", "--is-inside-work-tree"])
         if check.returncode != 0 or check.stdout.strip() != "true":
@@ -896,13 +896,13 @@ def update_from_github():
             return
 
         if count.stdout.strip() == "0":
-            print("AFKAR PHOTO EDITOR PRO sudah versi terbaru.")
+            print(G + "[OK] AFKAR PHOTO EDITOR PRO sudah versi terbaru." + RESET)
             return
 
-        print("Pembaruan tersedia:", count.stdout.strip(), "commit.")
+        print(Y + "[UPDATE] Pembaruan tersedia: " + count.stdout.strip() + " commit." + RESET)
         confirm = input("Unduh dan pasang pembaruan? [y/N]: ").strip().lower()
         if confirm not in ("y", "ya"):
-            print("Update dibatalkan.")
+            print(Y + "Update dibatalkan." + RESET)
             return
 
         pull = run_git(["pull", "--ff-only", "origin", "main"])
@@ -913,7 +913,7 @@ def update_from_github():
 
         print(pull.stdout.strip() or "Pembaruan berhasil.")
         print("Tutup aplikasi, lalu jalankan kembali: bash main")
-        print("File lisensi di folder home tidak diubah oleh updater.")
+        print(C + "File lisensi tetap terpisah dan tidak diubah." + RESET)
 
     except subprocess.TimeoutExpired:
         print("Waktu pemeriksaan habis. Coba lagi nanti.")
