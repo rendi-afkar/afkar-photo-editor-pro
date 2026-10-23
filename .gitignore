@@ -1,0 +1,12 @@
+user.json
+input/
+output/
+logs/
+__pycache__/
+*.pyc
+*.bak
+*.bak-*
+*.backup_*
+.DS_Store
+
+*.bak_*
